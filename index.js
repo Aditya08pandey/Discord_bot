@@ -4,6 +4,10 @@ const pool = require("./db");
 const { sendOTP } = require("./email");
 const cron = require("node-cron");
 
+// ── PASTE YOUR QUESTIONS CHANNEL ID HERE ────────────────────────────────────
+const QUESTIONS_CHANNEL_ID = "1381593523698143232"; // e.g. "123456789012345678"
+// ─────────────────────────────────────────────────────────────────────────────
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,7 +24,7 @@ function generateOTP() {
 
 // Schedule daily reminders for unresolved doubts
 function scheduleDoubtReminders() {
-  // runs daily at 10:00 AM
+  // runs daily at 10:00 AM server time
   cron.schedule("0 10 * * *", async () => {
     const { rows } = await pool.query(
       "SELECT author_id, array_agg(id) AS pending_ids FROM doubts WHERE resolved = false GROUP BY author_id"
@@ -31,7 +35,7 @@ function scheduleDoubtReminders() {
         await user.send(
           `🔔 You have ${r.pending_ids.length} unresolved doubts (IDs: ${r.pending_ids.join(", ")}).`
         );
-      } catch (e) {
+      } catch {
         console.warn(`Could not DM reminder to ${r.author_id}`);
       }
     }
@@ -43,7 +47,7 @@ client.once("ready", () => {
   scheduleDoubtReminders();
 });
 
-// Welcome DM handler (already implemented)
+// Welcome DM handler
 client.on("guildMemberAdd", async (member) => {
   try {
     const welcomeEmbed = new EmbedBuilder()
@@ -51,15 +55,14 @@ client.on("guildMemberAdd", async (member) => {
       .setDescription([
         `Hi **${member.user.username}**, welcome aboard!`,
         '',
-         '**Note**: You will only be able to join the AlgoPath community if your email is registered with AlgoPath.',
+        '**Note**: You will only be able to join the AlgoPath community if your email is registered with AlgoPath.',
         '',
         '**If already registered**, then follow the below steps to get verified and join the community',
         '',
-
         '**Getting Started Tips:**',
         '- Use `!verify your@algopath.com` in #welcome to register',
         '- Follow the DM instructions to complete OTP verification',
-        '- Then ask doubts in #questions with `!ask`',
+        '- Then ask doubts in #doubts with `!ask`',
         '- View or resolve them with `!doubts`/`!resolve`',
         '',
         '_If you don’t see the email, check your spam folder or wait a minute._'
@@ -73,10 +76,17 @@ client.on("guildMemberAdd", async (member) => {
   }
 });
 
-// Main message handler
 client.on("messageCreate", async (message) => {
   if (message.author.bot || !message.guild) return;
+
   const [command, ...args] = message.content.trim().split(/\s+/);
+
+  // ── RESTRICT DOUBT COMMANDS TO #questions ───────────────────────────────────
+  const doubtCommands = ["!ask", "!resolve", "!doubts"];
+  if (doubtCommands.includes(command) && message.channel.id !== QUESTIONS_CHANNEL_ID) {
+    return message.reply(`❌ Please use this command only in <#${QUESTIONS_CHANNEL_ID}>.`);
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // ---- Doubt commands ----
   if (command === "!ask") {
@@ -132,7 +142,7 @@ client.on("messageCreate", async (message) => {
     return message.reply({ embeds: [embed] });
   }
 
-  // ---- Existing verification commands ----
+  // ---- Verification commands (unchanged) ----
   if (command === "!verify") {
     const email = args[0];
     if (!email || !email.includes("@")) return message.reply("❌ Please provide a valid email.");
@@ -183,5 +193,3 @@ client.on("messageCreate", async (message) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
-
-
