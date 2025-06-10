@@ -4,8 +4,8 @@ const pool = require("./db");
 const { sendOTP } = require("./email");
 const cron = require("node-cron");
 
-// ── PASTE YOUR QUESTIONS CHANNEL ID HERE ────────────────────────────────────
-const QUESTIONS_CHANNEL_ID = "1381593523698143232"; // e.g. "123456789012345678"
+// ── PASTE YOUR DOUBTS CHANNEL ID HERE ────────────────────────────────────
+const QUESTIONS_CHANNEL_ID = "1381593523698143232"; 
 // ─────────────────────────────────────────────────────────────────────────────
 
 const client = new Client({
