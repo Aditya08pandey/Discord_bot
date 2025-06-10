@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
 const pool = require("./db");
 const { sendOTP } = require("./email");
 
@@ -20,12 +20,37 @@ client.once("ready", () => {
   console.log(`✅ Bot is online as ${client.user.tag}`);
 });
 
+// Send a welcome DM when a new member joins
+client.on("guildMemberAdd", async (member) => {
+  try {
+    const welcomeEmbed = new EmbedBuilder()
+      .setTitle('👋 Welcome to AlgoPath!')
+      .setDescription([
+        `Hi **${member.user.username}**, welcome aboard!`,
+        '',
+        '**Note**: You will only be able to join the AlgoPath community if your email is registered with AlgoPath.',
+        '',
+        '**If already registered**, then follow the below steps to get verified and join the community',
+        '',
+        '**How to get verified:**',
+        '1. In welcome channel, type `!verify your@algopath.com`',
+        '2. Check your email for the OTP code',
+        '3. Again in welcome channel, type `!otp 123456` (replace with your code)',
+        '',
+        '_If you don’t see the email, check your spam folder or wait a minute._'
+      ].join('\n'))
+      .setFooter({ text: 'Happy coding 👩‍💻👨‍💻' })
+      .setTimestamp();
 
+    await member.send({ embeds: [welcomeEmbed] });
+  } catch (err) {
+    console.warn(`Could not send welcome DM to ${member.user.tag}`);
+  }
+});
 
 client.on("messageCreate", (message) => {
   console.log("Message received:", message.content);
 });
-
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
